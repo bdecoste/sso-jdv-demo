@@ -1,4 +1,4 @@
-FROM scratch
+FROM rhel7:latest
 
 LABEL Name="jboss-datavirt-6/demo-jdv-extensions" \
       Version="latest" \
