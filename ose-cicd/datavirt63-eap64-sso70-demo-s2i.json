@@ -22,15 +22,15 @@
             "required": true
         },
         {
-            "description": "Custom hostname for http service route.  Leave blank for default hostname, e.g.: <application-name>-<project>.<default-domain-suffix>",
+            "description": "Custom hostname for http service route.  Leave blank for default hostname, e.g.: <application-name>.<project>.<default-domain-suffix>",
             "name": "HOSTNAME_HTTP",
-            "value": "",
+            "value": "datavirt.cloudapps.example.com",
             "required": false
         },
         {
             "description": "Custom hostname for https service route.  Leave blank for default hostname, e.g.: <application-name>.<project>.<default-domain-suffix>",
             "name": "HOSTNAME_HTTPS",
-            "value": "",
+            "value": "secure-datavirt.cloudapps.example.com",
             "required": false
         },
         {
@@ -141,7 +141,7 @@
         {
             "description": "Username for Teiid user",
             "name": "TEIID_USERNAME",
-            "value": "teiidUser",
+            "value": "demouser",
             "required": false
         },
         {
@@ -227,6 +227,18 @@
             "description": "If true SSL communication between EAP and the SSO Server will be insecure (i.e. certificate validation is disabled with curl)",
             "name": "SSO_DISABLE_SSL_CERTIFICATE_VALIDATION",
             "value": "true",
+            "required": false
+        },
+        {
+            "description": "Custom hostname for SSO http service route.  Leave blank for default hostname, e.g.: <application-name>.<project>.<default-domain-suffix>",
+            "name": "SSO_HOSTNAME_HTTP",
+            "value": "sso.cloudapps.example.com",
+            "required": false
+        },
+        {
+            "description": "Custom hostname for SSO https service route.  Leave blank for default hostname, e.g.: <application-name>.<project>.<default-domain-suffix>",
+            "name": "SSO_HOSTNAME_HTTPS",
+            "value": "secure-sso.cloudapps.example.com",
             "required": false
         },
         {
@@ -437,16 +449,160 @@
                     }
                 ],
                 "selector": {
-                    "deploymentConfig": "${APPLICATION_NAME}-eap"
+                    "deploymentConfig": "eap"
                 }
             },
             "metadata": {
-                "name": "${APPLICATION_NAME}-eap",
+                "name": "eap",
                 "labels": {
-                    "application": "${APPLICATION_NAME}eap"
+                    "application": "eap"
                 },
                 "annotations": {
                     "description": "The web server's http port."
+                }
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "spec": {
+                "ports": [
+                    {
+                        "port": 8443,
+                        "targetPort": 8443
+                    }
+                ],
+                "selector": {
+                    "deploymentConfig": "eap"
+                }
+            },
+            "metadata": {
+                "name": "secure-eap",
+                "labels": {
+                    "application": "eap"
+                },
+                "annotations": {
+                    "description": "The web server's https port."
+                }
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "spec": {
+                "ports": [
+                    {
+                        "port": 5432,
+                        "targetPort": 5432
+                    }
+                ],
+                "selector": {
+                    "deploymentConfig": "sso-postgresql"
+                }
+            },
+            "metadata": {
+                "name": "sso-postgresql",
+                "labels": {
+                    "application": "sso",
+                    "component": "database"
+                },
+                "annotations": {
+                    "description": "The database server's port."
+                }
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "spec": {
+                "ports": [
+                    {
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "deploymentConfig": "sso"
+                }
+            },
+            "metadata": {
+                "name": "sso",
+                "labels": {
+                    "application": "sso",
+                    "component": "server"
+                },
+                "annotations": {
+                    "description": "The web server's http port."
+                }
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "spec": {
+                "ports": [
+                    {
+                        "port": 8443,
+                        "targetPort": 8443
+                    }
+                ],
+                "selector": {
+                    "deploymentConfig": "sso"
+                }
+            },
+            "metadata": {
+                "name": "secure-sso",
+                "labels": {
+                    "application": "sso",
+                    "component": "server"
+                },
+                "annotations": {
+                    "description": "The web server's https port."
+                }
+            }
+        },
+        {
+            "kind": "Route",
+            "apiVersion": "v1",
+            "id": "sso-http",
+            "metadata": {
+                "name": "sso",
+                "labels": {
+                    "application": "sso",
+                    "component": "server"
+                },
+                "annotations": {
+                    "description": "Route for application's http service."
+                }
+            },
+            "spec": {
+                "host": "${SSO_HOSTNAME_HTTP}",
+                "to": {
+                    "name": "sso"
+                }
+            }
+        },
+        {
+            "kind": "Route",
+            "apiVersion": "v1",
+            "id": "sso-https",
+            "metadata": {
+                "name": "secure-sso",
+                "labels": {
+                    "application": "sso",
+                    "component": "server"
+                },
+                "annotations": {
+                    "description": "Route for application's https service."
+                }
+            },
+            "spec": {
+                "host": "${SSO_HOSTNAME_HTTPS}",
+                "to": {
+                    "name": "secure-sso"
+                },
+                "tls": {
+                    "termination": "passthrough"
                 }
             }
         },
@@ -496,23 +652,48 @@
         {
             "kind": "Route",
             "apiVersion": "v1",
-            "id": "${APPLICATION_NAME}-eap",
+            "id": "eap",
             "metadata": {
-                "name": "${APPLICATION_NAME}-eap",
+                "name": "eap",
                 "labels": {
-                    "application": "${APPLICATION_NAME}eap"
+                    "application": "eap"
                 },
                 "annotations": {
                     "description": "Route for application's http service."
                 }
             },
             "spec": {
-                "host": "datavirt-eap-demo.cloudapps.example.com",
+                "host": "eap.cloudapps.example.com",
                 "to": {
-                    "name": "${APPLICATION_NAME}-eap"
+                    "name": "eap"
                 }
             }
         },
+        {
+            "kind": "Route",
+            "apiVersion": "v1",
+            "id": "secure-eap",
+            "metadata": {
+                "name": "secure-eap",
+                "labels": {
+                    "application": "eap",
+                    "component": "eap"
+                },
+                "annotations": {
+                    "description": "Route for application's https service."
+                }
+            },
+            "spec": {
+                "host": "secure-eap.cloudapps.example.com",
+                "to": {
+                    "name": "secure-eap"
+                },
+                "tls": {
+                    "termination": "passthrough"
+                }
+            }
+        },
+
         {
             "kind": "ImageStream",
             "apiVersion": "v1",
@@ -527,9 +708,9 @@
             "kind": "ImageStream",
             "apiVersion": "v1",
             "metadata": {
-                "name": "${APPLICATION_NAME}-eap",
+                "name": "eap",
                 "labels": {
-                    "application": "${APPLICATION_NAME}eap"
+                    "application": "eap"
                 }
             }
         },
@@ -560,7 +741,7 @@
             "metadata": { 
                 "name": "demo-eap-extensions",
                 "labels": {
-                    "application": "${APPLICATION_NAME}eap"
+                    "application": "eap"
                 }
             },
             "spec": {
@@ -633,7 +814,7 @@
             "metadata": {
                 "name": "demo-eap-extensions",
                 "labels": {
-                    "application": "${APPLICATION_NAME}eap"
+                    "application": "eap"
                 }
             },
             "spec": {
@@ -770,16 +951,16 @@
             "kind": "BuildConfig",
             "apiVersion": "v1",
             "metadata": {
-                "name": "${APPLICATION_NAME}-eap",
+                "name": "eap",
                 "labels": {
-                    "application": "${APPLICATION_NAME}eap"
+                    "application": "eap"
                 }
             },
             "spec": {
                 "source": {
                     "type": "Git",
                     "git": {
-                        "uri": "http://github.com/bdecoste/jdv-demo-app",
+                        "uri": "http://github.com/bdecoste/sso-jdv-demo-app",
                         "ref": ""
                     },
                     "contextDir": "",
@@ -819,7 +1000,7 @@
                 "output": {
                     "to": {
                         "kind": "ImageStreamTag",
-                        "name": "${APPLICATION_NAME}-eap:latest"
+                        "name": "eap:latest"
                     }
                 },
                 "triggers": [
@@ -1408,9 +1589,9 @@
             "kind": "DeploymentConfig",
             "apiVersion": "v1",
             "metadata": {
-                "name": "${APPLICATION_NAME}-eap",
+                "name": "eap",
                 "labels": {
-                    "application": "${APPLICATION_NAME}eap"
+                    "application": "eap"
                 }
             },
             "spec": {
@@ -1423,11 +1604,11 @@
                         "imageChangeParams": {
                             "automatic": true,
                             "containerNames": [
-                                "${APPLICATION_NAME}-eap"
+                                "eap"
                             ],
                             "from": {
                                 "kind": "ImageStreamTag",
-                                "name": "${APPLICATION_NAME}-eap:latest"
+                                "name": "eap:latest"
                             }
                         }
                     },
@@ -1437,22 +1618,22 @@
                 ],
                 "replicas": 1,
                 "selector": {
-                    "deploymentConfig": "${APPLICATION_NAME}-eap"
+                    "deploymentConfig": "eap"
                 },
                 "template": {
                     "metadata": {
-                        "name": "${APPLICATION_NAME}-eap",
+                        "name": "eap",
                         "labels": {
-                            "deploymentConfig": "${APPLICATION_NAME}-eap",
-                            "application": "${APPLICATION_NAME}eap"
+                            "deploymentConfig": "eap",
+                            "application": "eap"
                         }
                     },
                     "spec": {
                         "terminationGracePeriodSeconds": 60,
                         "containers": [
                             {
-                                "name": "${APPLICATION_NAME}-eap",
-                                "image": "${APPLICATION_NAME}-eap",
+                                "name": "eap",
+                                "image": "eap",
                                 "imagePullPolicy": "Always",
                                 "volumeMounts": [
                                     {
@@ -1464,6 +1645,16 @@
                                         "name": "config-demo-app-volume",
                                         "mountPath": "/opt/eap/extensions",
                                         "readOnly": false
+                                    },
+                                    {
+                                        "name": "sso-saml-keystore-volume",
+                                        "mountPath": "/etc/sso-saml-secret-volume",
+                                        "readOnly": true
+                                    },
+                                    {
+                                        "name": "eap-keystore-volume",
+                                        "mountPath": "/etc/eap-secret-volume",
+                                        "readOnly": true
                                     }
                                 ],
                                 "livenessProbe": {
@@ -1504,7 +1695,7 @@
                                 "env": [
                                     {
                                         "name": "OPENSHIFT_KUBE_PING_LABELS",
-                                        "value": "application=${APPLICATION_NAME}eap"
+                                        "value": "application=eap"
                                     },
                                     {
                                         "name": "OPENSHIFT_KUBE_PING_NAMESPACE",
@@ -1529,6 +1720,82 @@
                                     {
                                         "name": "ENV_FILES",
                                         "value": "/etc/eap-extensions/datasources.properties"
+                                    },
+                                    {
+                                        "name": "EAP_HTTPS_KEYSTORE_DIR",
+                                        "value": "/etc/eap-secret-volume"
+                                    },
+                                    {
+                                        "name": "EAP_HTTPS_KEYSTORE",
+                                        "value": "${HTTPS_KEYSTORE}"
+                                    },
+                                    {
+                                        "name": "EAP_HTTPS_NAME",
+                                        "value": "${HTTPS_NAME}"
+                                    },
+                                    {
+                                        "name": "EAP_HTTPS_PASSWORD",
+                                        "value": "${HTTPS_PASSWORD}"
+                                    },
+                                    {
+                                        "name": "SSO_URL",
+                                        "value": "https://${SSO_HOSTNAME_HTTPS}/auth"
+                                    },
+                                    {
+                                        "name": "SSO_SERVICE_URL",
+                                        "value": "${SSO_SERVICE_URL}"
+                                    },
+                                    {
+                                        "name": "SSO_REALM",
+                                        "value": "demo"
+                                    },
+                                    {
+                                        "name": "SSO_USERNAME",
+                                        "value": "demouser"
+                                    },
+                                    {
+                                        "name": "SSO_PASSWORD",
+                                        "value": "demopass"
+                                    },
+                                    {
+                                        "name": "SSO_PUBLIC_KEY",
+                                        "value": ""
+                                    },
+                                    {
+                                        "name": "SSO_SAML_KEYSTORE_SECRET",
+                                        "value": "sso-app-secret"
+                                    },
+                                    {
+                                        "name": "SSO_SAML_KEYSTORE",
+                                        "value": "keystore.jks"
+                                    },
+                                    {
+                                        "name": "SSO_SAML_KEYSTORE_DIR",
+                                        "value": "/etc/sso-saml-secret-volume"
+                                    },
+                                    {
+                                        "name": "SSO_SAML_CERTIFICATE_NAME",
+                                        "value": "jboss"
+                                    },
+                                    {
+                                        "name": "SSO_SAML_KEYSTORE_PASSWORD",
+                                        "value": "mykeystorepass"
+                                    },
+                                    {
+                                        "name": "SSO_SECRET",
+                                        "value": "${SSO_SECRET}"
+                                    },
+                                    {
+                                        "name": "HOSTNAME_HTTP",
+                                        "value": "eap.cloudapps.example.com"
+                                    },
+                                    {
+                                        "name": "HOSTNAME_HTTPS",
+                                        "value": "secure-eap.cloudapps.example.com"
+                                    },
+                                    {
+                                        "name": "SSO_DISABLE_SSL_CERTIFICATE_VALIDATION",
+                                        "value": "${SSO_DISABLE_SSL_CERTIFICATE_VALIDATION}"
                                     }
                                 ]
                             }
@@ -1544,6 +1811,18 @@
                                 "name": "config-demo-app-volume",
                                 "secret": {
                                     "secretName": "app-configure-demo-secret"
+                                }
+                            },
+                            {
+                                "name": "sso-saml-keystore-volume",
+                                "secret": {
+                                    "secretName": "sso-app-secret"
+                                }
+                            },
+                            {
+                                "name": "eap-keystore-volume",
+                                "secret": {
+                                    "secretName": "${HTTPS_SECRET}"
                                 }
                             }
                         ]
